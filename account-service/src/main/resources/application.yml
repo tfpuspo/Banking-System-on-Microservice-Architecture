@@ -1,0 +1,21 @@
+grpc:
+  server:
+    port: ${GRPC_PORT:50051}
+    reflection-service-enabled: true
+  client:
+    auth-service:
+      address: static://${AUTH_SERVICE_HOST:auth-service}:${AUTH_SERVICE_PORT:50051}
+      negotiation-type: plaintext
+      enable-keep-alive: true
+
+spring:
+  application:
+    name: account-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:account_db}
+    username: ${DB_USER:account_user}
+    password: ${DB_PASSWORD:account_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false

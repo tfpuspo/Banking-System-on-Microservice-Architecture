@@ -1,0 +1,24 @@
+_format_version: "3.0"
+
+services:
+  - name: graphql-gateway-service
+    url: http://graphql-gateway:4000
+    routes:
+      - name: graphql-route
+        paths:
+          - /graphql
+        strip_path: false   # Spring GraphQL's default endpoint IS /graphql, so forward the full path
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://localhost:3000
+          methods:
+            - GET
+            - POST
+            - OPTIONS
+          headers:
+            - Content-Type
+            - Authorization
+          credentials: false
+          max_age: 3600

@@ -1,0 +1,309 @@
+networks:
+  banking-net:
+    driver: bridge
+
+volumes:
+  auth-db-data:
+  account-db-data:
+  transaction-db-data:
+  ledger-db-data:
+  notification-db-data:
+  kong-db-data:
+
+services:
+
+  # ---------- Per-service Postgres databases ----------
+
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  account-db:
+    image: postgres:16-alpine
+    container_name: account-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: account_user
+      POSTGRES_PASSWORD: account_pass
+      POSTGRES_DB: account_db
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U account_user -d account_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  transaction-db:
+    image: postgres:16-alpine
+    container_name: transaction-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: transaction_user
+      POSTGRES_PASSWORD: transaction_pass
+      POSTGRES_DB: transaction_db
+    volumes:
+      - transaction-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transaction_user -d transaction_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ledger-db:
+    image: postgres:16-alpine
+    container_name: ledger-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ledger_user
+      POSTGRES_PASSWORD: ledger_pass
+      POSTGRES_DB: ledger_db
+    volumes:
+      - ledger-db-data:/var/lib/postgresql/data
+    ports:
+      - "5436:5432"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger_user -d ledger_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  notification-db:
+    image: postgres:16-alpine
+    container_name: notification-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification_user -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------- auth-service ----------
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: auth-db
+      DB_PORT: 5432        # internal container port, not the 5433 host mapping
+      DB_NAME: auth_db
+      DB_USER: auth_user
+      DB_PASSWORD: auth_pass
+      JWT_SECRET: dev-only-insecure-secret-change-me-before-any-real-use-01234567
+      GRPC_PORT: 50051
+    ports:
+      - "50052:50051"   # host:container — 50051 was blocked by Windows' dynamic port exclusion range
+    networks:
+      - banking-net
+    depends_on:
+      auth-db:
+        condition: service_healthy
+
+  # ---------- Kafka (KRaft mode - no Zookeeper needed) ----------
+
+  kafka:
+    image: apache/kafka:3.7.0
+    container_name: kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+    networks:
+      - banking-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ---------- transaction-service ----------
+
+  transaction-service:
+    build: ./transaction-service
+    container_name: transaction-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: transaction-db
+      DB_PORT: 5432
+      DB_NAME: transaction_db
+      DB_USER: transaction_user
+      DB_PASSWORD: transaction_pass
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 50051
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_PORT: 50051
+    ports:
+      - "50056:50051"
+    networks:
+      - banking-net
+    depends_on:
+      transaction-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+
+  # ---------- ledger-service ----------
+
+  ledger-service:
+    build: ./ledger-service
+    container_name: ledger-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: ledger-db
+      DB_PORT: 5432
+      DB_NAME: ledger_db
+      DB_USER: ledger_user
+      DB_PASSWORD: ledger_pass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_PORT: 50051
+    ports:
+      - "50057:50051"
+    networks:
+      - banking-net
+    depends_on:
+      ledger-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------- account-service ----------
+
+  account-service:
+    build: ./account-service
+    container_name: account-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: account-db
+      DB_PORT: 5432
+      DB_NAME: account_db
+      DB_USER: account_user
+      DB_PASSWORD: account_pass
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: 50051
+      GRPC_PORT: 50051
+    ports:
+      - "50055:50051"
+    networks:
+      - banking-net
+    depends_on:
+      account-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+
+  # ---------- graphql-gateway (translates GraphQL -> gRPC) ----------
+
+  graphql-gateway:
+    build: ./graphql-gateway
+    container_name: graphql-gateway
+    restart: unless-stopped
+    environment:
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "50051"
+      ACCOUNT_SERVICE_HOST: account-service
+      ACCOUNT_SERVICE_PORT: "50051"
+      TRANSACTION_SERVICE_HOST: transaction-service
+      TRANSACTION_SERVICE_PORT: "50051"
+      LEDGER_SERVICE_HOST: ledger-service
+      LEDGER_SERVICE_PORT: "50051"
+      PORT: 4000
+    ports:
+      - "4000:4000"
+    networks:
+      - banking-net
+    depends_on:
+      - auth-service
+      - account-service
+      - transaction-service
+      - ledger-service
+
+  # ---------- frontend (Next.js web client) ----------
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # This must be a browser-reachable URL, since GraphQL calls happen
+        # client-side in the user's browser, not inside the Docker network.
+        NEXT_PUBLIC_GRAPHQL_URL: http://localhost:8000/graphql
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - banking-net
+    depends_on:
+      - kong
+
+  # ---------- Kong (DB-less / declarative mode) ----------
+
+  kong:
+    image: kong:3.7
+    container_name: kong
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    volumes:
+      - ./kong/kong.yml:/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"   # Proxy (what clients hit)
+      - "8001:8001"   # Admin API
+    networks:
+      - banking-net
+    depends_on:
+      - graphql-gateway

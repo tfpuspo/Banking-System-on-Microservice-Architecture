@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package account;
+
+option go_package = "banking/proto/account";
+option java_package = "com.banking.account.grpc";
+option java_multiple_files = true;
+
+service AccountService {
+  rpc CreateAccount (CreateAccountRequest) returns (Account);
+  rpc GetAccount (GetAccountRequest) returns (Account);
+  rpc ListAccountsForUser (ListAccountsRequest) returns (ListAccountsResponse);
+  rpc UpdateAccountStatus (UpdateAccountStatusRequest) returns (Account);
+}
+
+enum AccountType {
+  CHECKING = 0;
+  SAVINGS = 1;
+}
+
+enum AccountStatus {
+  ACTIVE = 0;
+  FROZEN = 1;
+  CLOSED = 2;
+}
+
+message Account {
+  string account_id = 1;
+  string user_id = 2;
+  AccountType type = 3;
+  AccountStatus status = 4;
+  string currency = 5;
+  int64 balance_minor_units = 6; // store money as integer minor units (cents)
+  string created_at = 7;
+}
+
+message CreateAccountRequest {
+  string user_id = 1;
+  AccountType type = 2;
+  string currency = 3;
+}
+
+message GetAccountRequest {
+  string account_id = 1;
+}
+
+message ListAccountsRequest {
+  string user_id = 1;
+}
+
+message ListAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+message UpdateAccountStatusRequest {
+  string account_id = 1;
+  AccountStatus status = 2;
+}

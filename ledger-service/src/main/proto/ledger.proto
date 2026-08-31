@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package ledger;
+
+option go_package = "banking/proto/ledger";
+option java_package = "com.banking.ledger.grpc";
+option java_multiple_files = true;
+
+// ledger-service is the single source of truth for money movement.
+// transaction-service calls this to actually move funds via double-entry bookkeeping.
+service LedgerService {
+  rpc PostEntry (PostEntryRequest) returns (PostEntryResponse);
+  rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
+  rpc GetJournal (GetJournalRequest) returns (GetJournalResponse);
+}
+
+message PostEntryRequest {
+  string transaction_id = 1;
+  string debit_account_id = 2;
+  string credit_account_id = 3;
+  int64 amount_minor_units = 4;
+  string currency = 5;
+  string idempotency_key = 6;
+}
+
+message PostEntryResponse {
+  string entry_id = 1;
+  bool success = 2;
+  string reason = 3; // populated on failure, e.g. "insufficient_funds"
+}
+
+message GetBalanceRequest {
+  string account_id = 1;
+}
+
+message GetBalanceResponse {
+  string account_id = 1;
+  int64 balance_minor_units = 2;
+  string currency = 3;
+}
+
+message GetJournalRequest {
+  string account_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message JournalEntry {
+  string entry_id = 1;
+  string transaction_id = 2;
+  string account_id = 3;
+  int64 amount_minor_units = 4; // positive = credit, negative = debit
+  string created_at = 5;
+}
+
+message GetJournalResponse {
+  repeated JournalEntry entries = 1;
+  string next_page_token = 2;
+}

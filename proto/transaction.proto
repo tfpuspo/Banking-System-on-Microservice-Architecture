@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package transaction;
+
+option go_package = "banking/proto/transaction";
+
+service TransactionService {
+  rpc InitiateTransfer (TransferRequest) returns (Transaction);
+  rpc InitiateDeposit (DepositRequest) returns (Transaction);
+  rpc InitiateWithdrawal (WithdrawalRequest) returns (Transaction);
+  rpc GetTransaction (GetTransactionRequest) returns (Transaction);
+  rpc ListTransactionsForAccount (ListTransactionsRequest) returns (ListTransactionsResponse);
+}
+
+enum TransactionStatus {
+  PENDING = 0;
+  COMPLETED = 1;
+  FAILED = 2;
+  REVERSED = 3;
+}
+
+message Transaction {
+  string transaction_id = 1;
+  string from_account_id = 2;
+  string to_account_id = 3;
+  int64 amount_minor_units = 4;
+  string currency = 5;
+  TransactionStatus status = 6;
+  string created_at = 7;
+  string idempotency_key = 8;
+}
+
+message TransferRequest {
+  string from_account_id = 1;
+  string to_account_id = 2;
+  int64 amount_minor_units = 3;
+  string currency = 4;
+  string idempotency_key = 5;
+}
+
+message DepositRequest {
+  string to_account_id = 1;
+  int64 amount_minor_units = 2;
+  string currency = 3;
+  string idempotency_key = 4;
+}
+
+message WithdrawalRequest {
+  string from_account_id = 1;
+  int64 amount_minor_units = 2;
+  string currency = 3;
+  string idempotency_key = 4;
+}
+
+message GetTransactionRequest {
+  string transaction_id = 1;
+}
+
+message ListTransactionsRequest {
+  string account_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListTransactionsResponse {
+  repeated Transaction transactions = 1;
+  string next_page_token = 2;
+}

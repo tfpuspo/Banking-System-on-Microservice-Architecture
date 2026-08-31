@@ -1,0 +1,67 @@
+type AuthPayload {
+    accessToken: String!
+    refreshToken: String!
+    expiresIn: Int!
+}
+
+type RegisterResult {
+    userId: ID!
+    email: String!
+}
+
+type ValidateTokenResult {
+    valid: Boolean!
+    userId: ID
+    roles: [String!]
+}
+
+type AuthorizeResult {
+    allowed: Boolean!
+    reason: String
+}
+
+type LogoutResult {
+    success: Boolean!
+}
+
+type AccountResult {
+    accountId: ID!
+    userId: ID!
+    type: String!
+    status: String!
+    currency: String!
+    balanceMinorUnits: Int!
+    createdAt: String!
+}
+
+type TransactionResult {
+    transactionId: ID!
+    fromAccountId: ID
+    toAccountId: ID
+    amountMinorUnits: Int!
+    currency: String!
+    status: String!
+    idempotencyKey: String!
+    createdAt: String!
+}
+
+type Mutation {
+    register(email: String!, password: String!, fullName: String!): RegisterResult!
+    login(email: String!, password: String!): AuthPayload!
+    refreshToken(refreshToken: String!): AuthPayload!
+    logout(refreshToken: String!): LogoutResult!
+    createAccount(type: String!, currency: String!): AccountResult!
+    transfer(fromAccountId: ID!, toAccountId: ID!, amountMinorUnits: Int!, currency: String!, idempotencyKey: String): TransactionResult!
+    deposit(toAccountId: ID!, amountMinorUnits: Int!, currency: String!, idempotencyKey: String): TransactionResult!
+    updateAccountStatus(accountId: ID!, status: String!): AccountResult!
+}
+
+type Query {
+    validateToken(accessToken: String!): ValidateTokenResult!
+    authorize(userId: ID!, resource: String!, action: String!): AuthorizeResult!
+    account(accountId: ID!): AccountResult!
+    myAccounts: [AccountResult!]!
+    transaction(transactionId: ID!): TransactionResult!
+    accountTransactions(accountId: ID!): [TransactionResult!]!
+    accountBalance(accountId: ID!): Int!
+}

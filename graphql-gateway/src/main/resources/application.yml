@@ -1,0 +1,33 @@
+server:
+  port: ${PORT:4000}
+
+spring:
+  application:
+    name: graphql-gateway
+  graphql:
+    graphiql:
+      enabled: false   # Spring's bundled GraphiQL depends on a CDN that's currently broken (404s).
+                        # Use our own zero-dependency tool instead: /query-tool.html
+    cors:
+      allowed-origins: "http://localhost:3000"
+      allowed-methods: "*"
+      allowed-headers: "*"
+
+grpc:
+  client:
+    auth-service:
+      address: static://${AUTH_SERVICE_HOST:auth-service}:${AUTH_SERVICE_PORT:50051}
+      negotiation-type: plaintext   # fine inside the private Docker network
+      enable-keep-alive: true
+    account-service:
+      address: static://${ACCOUNT_SERVICE_HOST:account-service}:${ACCOUNT_SERVICE_PORT:50051}
+      negotiation-type: plaintext
+      enable-keep-alive: true
+    transaction-service:
+      address: static://${TRANSACTION_SERVICE_HOST:transaction-service}:${TRANSACTION_SERVICE_PORT:50051}
+      negotiation-type: plaintext
+      enable-keep-alive: true
+    ledger-service:
+      address: static://${LEDGER_SERVICE_HOST:ledger-service}:${LEDGER_SERVICE_PORT:50051}
+      negotiation-type: plaintext
+      enable-keep-alive: true

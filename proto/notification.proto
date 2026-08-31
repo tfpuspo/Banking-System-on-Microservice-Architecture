@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "banking/proto/notification";
+
+service NotificationService {
+  rpc SendNotification (SendNotificationRequest) returns (SendNotificationResponse);
+  rpc GetPreferences (GetPreferencesRequest) returns (Preferences);
+  rpc UpdatePreferences (UpdatePreferencesRequest) returns (Preferences);
+}
+
+enum Channel {
+  EMAIL = 0;
+  SMS = 1;
+  PUSH = 2;
+}
+
+message SendNotificationRequest {
+  string user_id = 1;
+  Channel channel = 2;
+  string template = 3;       // e.g. "transaction_completed"
+  map<string, string> data = 4; // template variables
+}
+
+message SendNotificationResponse {
+  bool queued = 1;
+  string notification_id = 2;
+}
+
+message GetPreferencesRequest {
+  string user_id = 1;
+}
+
+message Preferences {
+  string user_id = 1;
+  repeated Channel enabled_channels = 2;
+}
+
+message UpdatePreferencesRequest {
+  string user_id = 1;
+  repeated Channel enabled_channels = 2;
+}
