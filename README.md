@@ -1,6 +1,6 @@
 # Banking System — Microservices Architecture
 
-A banking system built on GraphQL, gRPC, and Kong API Gateway — microservices with one isolated Postgres database each, safe money transfers via a Kafka Outbox flow, and identity re-verified at every service instead of trusted from the caller.
+A banking system built on GraphQL, gRPC, and Kong API Gateway — microservices with one isolated Postgres database each, safe money transfers via a Kafka Saga/Outbox flow, and independent identity verification at every service for stronger security.
 
 ## Tech stack
 
@@ -8,7 +8,7 @@ A banking system built on GraphQL, gRPC, and Kong API Gateway — microservices 
 - **Service-to-service**: gRPC — contracts in [`proto/`](./proto)
 - **API layer**: GraphQL (`graphql-gateway`) — the only interface clients see
 - **API Gateway**: Kong 3.7, declarative config in [`kong/kong.yml`](./kong/kong.yml)
-- **Async messaging**: Apache Kafka — Outbox pattern for transfers
+- **Async messaging**: Apache Kafka — Saga/Outbox pattern for transfers
 - **Database**: PostgreSQL 16, one instance per service
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Orchestration**: Docker Compose
