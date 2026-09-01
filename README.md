@@ -25,3 +25,12 @@ docker compose up -d
 
 - Frontend: `http://localhost:3000`
 - GraphQL through Kong: `http://localhost:8000/graphql`
+
+![Banking System Architecture](<images>/banking_system_architecture_v2.png)
+
+<img src="images/img-1.png">
+<img src="images/img-2.png">
+<img src="images/img-3.jpeg">
+<img src="images/img-4.jpeg">
+
+
