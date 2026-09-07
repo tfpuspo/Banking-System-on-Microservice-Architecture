@@ -1,4 +1,4 @@
-# Banking System — Microservices Architecture
+# Banking System — Microservices Architecture (Work-in-progress, not very organized yet)
 
 A banking system built on GraphQL, gRPC, and Kong API Gateway — microservices with one isolated Postgres database each, safe money transfers via a Kafka Saga/Outbox flow, and independent identity verification at every service for stronger security.
 
